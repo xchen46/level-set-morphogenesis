@@ -4,9 +4,7 @@ function [upwind_op, downwind_op] = interial_updownwind(row,col,dir)
         upwind_op = spdiags([-1 1],[0 1],row,row);
 
         upwind_op(1,:) = 0;
-        upwind_op(2,:) = 0;
         upwind_op(end,:) = 0;
-        upwind_op(end-1,:) = 0;
         IM = speye(col);
 
         IM(1,:) = 0;
@@ -18,9 +16,7 @@ function [upwind_op, downwind_op] = interial_updownwind(row,col,dir)
         downwind_op = spdiags([-1 1],[-1 0],row,row);
 
         downwind_op(1,:) = 0;
-        downwind_op(2,:) = 0;
         downwind_op(end,:) = 0;
-        downwind_op(end-1,:) = 0;
 
         downwind_op = kron(IM,downwind_op);
 
@@ -29,9 +25,7 @@ function [upwind_op, downwind_op] = interial_updownwind(row,col,dir)
         upwind_op = spdiags([-1 1],[0 1],col,col);
 
         upwind_op(1,:) = 0;
-        upwind_op(2,:) = 0;
         upwind_op(end,:) = 0;
-        upwind_op(end-1,:) = 0;
         IM = speye(row);
 
         IM(1,:) = 0;
@@ -43,11 +37,10 @@ function [upwind_op, downwind_op] = interial_updownwind(row,col,dir)
         downwind_op = spdiags([-1 1],[-1 0],col,col);
 
         downwind_op(1,:) = 0;
-        downwind_op(2,:) = 0;
         downwind_op(end,:) = 0;
-        downwind_op(end-1,:) = 0;
 
         downwind_op = kron(downwind_op,IM);
+
         % % create central difference for column
         % upwind_op = spdiags([1 -2 1],[-1 0 1],col,col);
         % 
