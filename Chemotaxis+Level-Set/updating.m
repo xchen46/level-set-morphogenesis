@@ -20,20 +20,45 @@ x = linspace(0,membrane_size,grid_size);
 
 % [u,v] = initalize_two_blob(dom_x,dom_y,4,6,1.5,1.5); % initialize u and v
 
-u = 0.3 + rand(grid_size,grid_size)*0.01;
-u(1,:) = u(2,:);
-u(3,:) = u(2,:);
-u(grid_size,:) = u(grid_size-1,:);
-u(grid_size-2,:) = u(grid_size-1,:);
 
-u(:,1) = u(:,2);
-u(:,3) = u(:,2);
-u(:,grid_size) = u(:,grid_size-1);
-u(:,grid_size-2) = u(:,grid_size-1);
+[xg, yg] = meshgrid(-5:5, -5:5);
+gauss_kernel = exp(-(xg.^2 + yg.^2)/(2*2^2));
+gauss_kernel = gauss_kernel / sum(gauss_kernel(:));
+% Smooth the initial field
+
+rng(1)
+u = 1 + randn(grid_size,grid_size)*0.01;
+% u = conv2(u, gauss_kernel, 'same');
+
+
+% u(1,:)     = 1;
+% u(end,:)   = 1;
+% u(:,1)     = 1;
+% u(:,end)   = 1;
+
+% u(1,:) = u(2,:);
+% u(grid_size,:) = u(grid_size-1,:);
+% u(:,1) = u(:,2);
+% u(:,grid_size) = u(:,grid_size-1);
 
 u = u(:);
 
-v = u/2;
+v = 10 + randn(grid_size,grid_size)*0.01;
+% v = conv2(v, gauss_kernel, 'same');
+
+% v(1,:) = v(2,:);
+% v(grid_size,:) = v(grid_size-1,:);
+% v(:,1) = v(:,2);
+% v(:,grid_size) = v(:,grid_size-1);
+
+
+% v(1,:)     = 10;
+% v(end,:)   = 10;
+% v(:,1)     = 10;
+% v(:,end)   = 10;
+
+
+v = v(:);
 
 phi = dom_y-25;
 phi = phi(:);
@@ -42,11 +67,16 @@ phi = phi(:);
 %% Simulation Parameters
 
 dt = 0.005;
+% D = 2;
+% % kappa = 0.3;
+% velc = 0.1;
+% a = 0.5;
+% c = 0.5;
+
 D = 1;
-% kappa = 0.3;
 velc = 0.1;
 a = 0.1;
-c = 4;
+c = 1;
 
 U = zeros(num,1000);
 V = zeros(num,1000);
@@ -77,6 +107,9 @@ Ops.Dy = (Dy + Ops.neumann_patch_y)./dx;
 [Ops.upwind_op_x, Ops.downwind_op_x] = interial_updownwind(grid_size,grid_size,1);
 [Ops.upwind_op_y, Ops.downwind_op_y] = interial_updownwind(grid_size,grid_size,2);
 % keep the upwind+downwind internal since they give us flux which should be 0 
+% it is interesting if you patch one operator or the other it works, but
+% not both
+
 
 
 %%
@@ -92,18 +125,22 @@ for i = 2:20000
     % Jx = kappa * (u.* grad_v_x);
     % Jy = kappa * (u.* grad_v_y);
 
+
     Jx = c*u./(1+u.^2+ 1e-3).*grad_v_x;
     Jy = c*u./(1+u.^2+ 1e-3).*grad_v_y;
 
-    div_Jv = Ops.Dx *Jx+ Ops.Dx *Jy;
+    div_Jv = Ops.Dx *Jx+ Ops.Dy *Jy;
 
     fu = u.*(1-u);
     fv = u-a*v;
 
     [uu,~] = gmres(Ops.lapcU,u, [], 1e-10, 200);
+    % now i think there is a porblem in gmres
+    % uu = Ops.lapcU \ u;
     u = dt*(-div_Jv+fu) + uu;
 
     [vv,~] = gmres(Ops.lapcV,v, [], 1e-10, 200);
+    % vv = Ops.lapcV \ v;
     v = dt*(fv) + vv;
 
 
@@ -112,7 +149,6 @@ for i = 2:20000
         V(:,i/20) = v;
         % Rho(:,i/20) = rho;
     end
-
 
 
     % Simulating rho
@@ -136,10 +172,10 @@ end
 
 
 %%
-vid = VideoWriter('UV_debug2.mp4', 'MPEG-4');
+vid = VideoWriter('UV_debug4.mp4', 'MPEG-4');
 vid.FrameRate = 10;  % Adjust frame rate as needed
 open(vid);
-clims = [0 1];
+% clims = [0 1];
 for i = 1:1000
     if mod(i,1) == 0
         clf
@@ -149,7 +185,7 @@ for i = 1:1000
         % contour(z, 'r', 'LineWidth', 5); axis equal tight;
         % hold on
         z = reshape(U(:,i),grid_size,grid_size);
-        k = imagesc(z,clims); 
+        k = imagesc(z); 
         set(k, 'AlphaData', z ~= 0);
         colormap(viridis); colorbar; axis equal tight;
         title('Concentration of U');
@@ -161,7 +197,7 @@ for i = 1:1000
         % contour(z, 'r', 'LineWidth', 5); axis equal tight;
         % hold on
         z = reshape(V(:,i),grid_size,grid_size);
-        k = imagesc(z,clims); 
+        k = imagesc(z); 
         set(k, 'AlphaData', z ~= 0);
         colormap(viridis); colorbar; axis equal tight;
         title('Concentration of V');
@@ -176,7 +212,7 @@ close(vid);
 
 %%
 
-vid = VideoWriter('UV_bd_debug2.mp4', 'MPEG-4');
+vid = VideoWriter('UV_bd_debug4.mp4', 'MPEG-4');
 vid.FrameRate = 10;  % Adjust frame rate as needed
 open(vid);
 clims = [0 1];
@@ -184,7 +220,7 @@ for i = 1:1000
     if mod(i,1) == 0
         clf
 
-        z = reshape(U(:,i),grid_size,grid_size);
+        z = reshape(V(:,i),grid_size,grid_size);
 
         % imagesc(z(:,end-1:end)), colorbar;
         plot(z(2,:)-z(1,:));

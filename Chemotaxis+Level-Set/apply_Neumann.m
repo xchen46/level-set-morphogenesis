@@ -10,7 +10,7 @@ function [S1, S2] = apply_Neumann(S,M,N,mode)
    if strcmp(mode, 'one_sided')
        S2 = S;
        % for boundary_LR = [1, M+1, tot - 2*M + 1, tot - M + 1]
-       for boundary_LR = [1, tot - 2*M + 1]
+       for boundary_LR = [1, tot - M + 1]
 
            if boundary_LR == 1 || boundary_LR == tot - M + 1
                idx = boundary_LR : boundary_LR + M - 1;
