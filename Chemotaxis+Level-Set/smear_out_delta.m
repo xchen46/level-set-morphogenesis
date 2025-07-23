@@ -9,7 +9,7 @@ function res = smear_out_delta(phi,dx)
 
 
     idx = (-epsilon < phi) & (phi < epsilon);
-    res(idx) = 1/(2*epsilon)+1/(2*phi(idx))*cos(pi*phi(idx)/epsilon);
+    res(idx) = (1 / (2 * epsilon)) * (1 + cos(pi * phi(idx) / epsilon));
 
     idx = phi > epsilon;
     res(idx) = 0;

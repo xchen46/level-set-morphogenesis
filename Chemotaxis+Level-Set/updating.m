@@ -7,14 +7,38 @@ clc
 clear 
 close all
 %% Initialize Parameters
+tic
 membrane_size = 50; % Membrane Size
-grid_size = 250; % Number of Grid_Point
+grid_size = 256; % Number of Grid_Point
 num = grid_size^2; % Total Number of entries
 dx = membrane_size/(grid_size - 1);  % Grid step
 x = linspace(0,membrane_size,grid_size); 
 [dom_x,dom_y]  = meshgrid(x,x); % Create grid
 
+%% Simulation Parameters
 
+dt = 0.005;
+% D = 2;
+% % kappa = 0.3;
+% velc = 0.1;
+% a = 0.5;
+% c = 0.5;
+
+D = 0.1;
+velc = 0.1;
+a = 0.5;
+c = 2.3;
+
+% U = zeros(num,1000);
+% V = zeros(num,1000);
+U = zeros(num,1);
+V = zeros(num,1);
+
+% Rho = zeros(num,1000);
+% Rho(:,1) = 1-smear_out_heaviside(phi,dx);
+% 
+% u = Rho(:,1).*u;
+% v = Rho(:,1).*v;
 
 %% Initialize U,V,phi
 
@@ -27,7 +51,7 @@ gauss_kernel = gauss_kernel / sum(gauss_kernel(:));
 % Smooth the initial field
 
 rng(1)
-u = 1 + randn(grid_size,grid_size)*0.01;
+u = 1+randn(grid_size,grid_size)*0.01;
 % u = conv2(u, gauss_kernel, 'same');
 
 
@@ -43,7 +67,7 @@ u = 1 + randn(grid_size,grid_size)*0.01;
 
 u = u(:);
 
-v = 10 + randn(grid_size,grid_size)*0.01;
+v = 1/a+randn(grid_size,grid_size)*0.01;
 % v = conv2(v, gauss_kernel, 'same');
 
 % v(1,:) = v(2,:);
@@ -62,30 +86,6 @@ v = v(:);
 
 phi = dom_y-25;
 phi = phi(:);
-
-
-%% Simulation Parameters
-
-dt = 0.005;
-% D = 2;
-% % kappa = 0.3;
-% velc = 0.1;
-% a = 0.5;
-% c = 0.5;
-
-D = 1;
-velc = 0.1;
-a = 0.1;
-c = 1;
-
-U = zeros(num,1000);
-V = zeros(num,1000);
-
-% Rho = zeros(num,1000);
-% Rho(:,1) = 1-smear_out_heaviside(phi,dx);
-% 
-% u = Rho(:,1).*u;
-% v = Rho(:,1).*v;
 
 %% Operator Consturction
 % Need to make sure the boundary conditions is doing its job
@@ -114,7 +114,7 @@ Ops.Dy = (Dy + Ops.neumann_patch_y)./dx;
 
 %%
 
-for i = 2:20000
+for i = 2:40000
     
     % Simulating what is inside the boundary
     flux_sign_x = sign(Ops.inlap_x*v);
@@ -134,19 +134,19 @@ for i = 2:20000
     fu = u.*(1-u);
     fv = u-a*v;
 
-    [uu,~] = gmres(Ops.lapcU,u, [], 1e-10, 200);
+    % [uu,~] = gmres(Ops.lapcU,u, [], 1e-10, 200);
     % now i think there is a porblem in gmres
-    % uu = Ops.lapcU \ u;
+    uu = Ops.lapcU \ u;
     u = dt*(-div_Jv+fu) + uu;
 
-    [vv,~] = gmres(Ops.lapcV,v, [], 1e-10, 200);
-    % vv = Ops.lapcV \ v;
+    % [vv,~] = gmres(Ops.lapcV,v, [], 1e-10, 200);
+    vv = Ops.lapcV \ v;
     v = dt*(fv) + vv;
 
 
-    if mod(i,20) == 0
-        U(:,i/20) = u;
-        V(:,i/20) = v;
+    if mod(i,40000) == 0
+        U(:,1) = u;
+        V(:,1) = v;
         % Rho(:,i/20) = rho;
     end
 
@@ -169,78 +169,79 @@ for i = 2:20000
 
 end
 
-
+toc
+save('comparsion1_c23_2.mat','U','V');
 
 %%
-vid = VideoWriter('UV_debug4.mp4', 'MPEG-4');
-vid.FrameRate = 10;  % Adjust frame rate as needed
-open(vid);
+% vid = VideoWriter('comparsion2.mp4', 'MPEG-4');
+% vid.FrameRate = 10;  % Adjust frame rate as needed
+% open(vid);
+% % clims = [0 1];
+% for i = 1:1000
+%     if mod(i,1) == 0
+%         clf
+% 
+%         subplot(2,1,1)
+%         % z = reshape(Rho(:,i),grid_size,grid_size);
+%         % contour(z, 'r', 'LineWidth', 5); axis equal tight;
+%         % hold on
+%         z = reshape(U(:,i),grid_size,grid_size);
+%         k = imagesc(z); 
+%         set(k, 'AlphaData', z ~= 0);
+%         colormap(viridis); colorbar; axis equal tight;
+%         title('Concentration of U');
+% 
+% 
+%         subplot(2,1,2)
+% 
+%         % z = reshape(Rho(:,i),grid_size,grid_size);
+%         % contour(z, 'r', 'LineWidth', 5); axis equal tight;
+%         % hold on
+%         z = reshape(V(:,i),grid_size,grid_size);
+%         k = imagesc(z); 
+%         set(k, 'AlphaData', z ~= 0);
+%         colormap(viridis); colorbar; axis equal tight;
+%         title('Concentration of V');
+% 
+%         frame = getframe(gcf);
+%         writeVideo(vid, frame);
+% 
+%     end
+% end 
+% 
+% close(vid);
+% 
+% %%
+% 
+% vid = VideoWriter('comparsion2bd.mp4', 'MPEG-4');
+% vid.FrameRate = 10;  % Adjust frame rate as needed
+% open(vid);
 % clims = [0 1];
-for i = 1:1000
-    if mod(i,1) == 0
-        clf
-
-        subplot(2,1,1)
-        % z = reshape(Rho(:,i),grid_size,grid_size);
-        % contour(z, 'r', 'LineWidth', 5); axis equal tight;
-        % hold on
-        z = reshape(U(:,i),grid_size,grid_size);
-        k = imagesc(z); 
-        set(k, 'AlphaData', z ~= 0);
-        colormap(viridis); colorbar; axis equal tight;
-        title('Concentration of U');
-
-
-        subplot(2,1,2)
-
-        % z = reshape(Rho(:,i),grid_size,grid_size);
-        % contour(z, 'r', 'LineWidth', 5); axis equal tight;
-        % hold on
-        z = reshape(V(:,i),grid_size,grid_size);
-        k = imagesc(z); 
-        set(k, 'AlphaData', z ~= 0);
-        colormap(viridis); colorbar; axis equal tight;
-        title('Concentration of V');
-
-        frame = getframe(gcf);
-        writeVideo(vid, frame);
-
-    end
-end 
-
-close(vid);
-
-%%
-
-vid = VideoWriter('UV_bd_debug4.mp4', 'MPEG-4');
-vid.FrameRate = 10;  % Adjust frame rate as needed
-open(vid);
-clims = [0 1];
-for i = 1:1000
-    if mod(i,1) == 0
-        clf
-
-        z = reshape(V(:,i),grid_size,grid_size);
-
-        % imagesc(z(:,end-1:end)), colorbar;
-        plot(z(2,:)-z(1,:));
-        hold on
-
-        plot(z(end-1,:)-z(end,:));
-
-        plot(z(:,2)-z(:,1));
-        plot(z(:,end-1)-z(:,end));
-
-        title('Concentration of U');
-
-        frame = getframe(gcf);
-        writeVideo(vid, frame);
-
-    end
-end 
-
-close(vid);
-
+% for i = 1:1000
+%     if mod(i,1) == 0
+%         clf
+% 
+%         z = reshape(V(:,i),grid_size,grid_size);
+% 
+%         % imagesc(z(:,end-1:end)), colorbar;
+%         plot(z(2,:)-z(1,:));
+%         hold on
+% 
+%         plot(z(end-1,:)-z(end,:));
+% 
+%         plot(z(:,2)-z(:,1));
+%         plot(z(:,end-1)-z(:,end));
+% 
+%         title('Concentration of U');
+% 
+%         frame = getframe(gcf);
+%         writeVideo(vid, frame);
+% 
+%     end
+% end 
+% 
+% close(vid);
+% 
 
 
 %% 
